@@ -9742,14 +9742,56 @@ const getProduct = async (sort) => {
   const data = await response.json();
   return data;
 };
-function App() {
-  const [isLoading, setIsLoading] = reactExports.useState(false);
-  const [isError, setIsError] = reactExports.useState(false);
+function useProducts(mappedSortType, category) {
   const [data, setData] = reactExports.useState([]);
   const [cart, setCart] = reactExports.useState(null);
+  const [isLoading, setIsLoading] = reactExports.useState(false);
+  const [isError, setIsError] = reactExports.useState(false);
+  const fetchData = reactExports.useCallback(async () => {
+    setIsLoading(true);
+    setIsError(false);
+    try {
+      const product = await getProduct(mappedSortType);
+      const cartRes = await getCartItem();
+      const filteredCategory = product.content.filter(
+        (item) => category === "전체" || item.category === category
+      );
+      const mapped = filteredCategory.map((item) => {
+        const cartItem = cartRes.content.find(
+          (ci2) => ci2.product.id === item.id
+        );
+        return {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          category: item.category,
+          imageUrl: item.imageUrl,
+          isInCart: cartItem ? 1 : 0,
+          cartId: cartItem == null ? void 0 : cartItem.id
+        };
+      });
+      setData(mapped);
+      setCart(cartRes);
+    } catch (e2) {
+      console.error(e2);
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [mappedSortType, category]);
+  reactExports.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+  return { data, cart, isLoading, isError, setIsError, fetchData };
+}
+function App() {
   const [sort, setSort] = reactExports.useState("낮은 가격 순");
   const [category, setCategory] = reactExports.useState("전체");
   const mappedSortType = sort === "낮은 가격 순" ? "asc" : "desc";
+  const { data, cart, isLoading, isError, setIsError, fetchData } = useProducts(
+    mappedSortType,
+    category
+  );
   const handleAddCart = async (product) => {
     if ((cart == null ? void 0 : cart.totalElements) === 50) {
       console.error("최대 장바구니 갯수는 50개 입니다.");
@@ -9758,9 +9800,9 @@ function App() {
     }
     try {
       await addCart(product.id);
-      await fetchData(mappedSortType);
-    } catch (error) {
-      console.error("장바구니 추가 실패:", error);
+      await fetchData();
+    } catch {
+      console.error("장바구니 추가 실패");
       setIsError(true);
     }
   };
@@ -9772,7 +9814,7 @@ function App() {
     }
     try {
       await removeCart(product.cartId);
-      await fetchData(mappedSortType);
+      await fetchData();
     } catch (error) {
       console.error("장바구니 제거 실패:", error);
       setIsError(true);
@@ -9789,40 +9831,6 @@ function App() {
       setSort(value);
     }
   };
-  const fetchData = async (mappedSortType2) => {
-    setIsLoading(true);
-    try {
-      const product = await getProduct(mappedSortType2);
-      const cart2 = await getCartItem();
-      const filteredCategory = product.content.filter(
-        (item) => category === "전체" || item.category === category
-      );
-      const data2 = (filteredCategory || []).map((item) => {
-        const cartItem = cart2.content.find(
-          (cartItem2) => cartItem2.product.id === item.id
-        );
-        return {
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          category: item.category,
-          imageUrl: item.imageUrl,
-          isInCart: cartItem ? 1 : 0,
-          cartId: cartItem ? cartItem.id : void 0
-        };
-      });
-      setData(data2);
-      setCart(cart2);
-    } catch (e2) {
-      setIsError(true);
-      console.error(e2);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  reactExports.useEffect(() => {
-    fetchData(mappedSortType);
-  }, [sort, category]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Global, { styles: GlobalStyle }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Layout, { children: [
