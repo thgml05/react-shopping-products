@@ -10127,8 +10127,6 @@ const ModalContainer = newStyled.div`
   background-color: ${Common.colors.white};
   color: ${Common.colors.black};
   height: auto;
-  // height: 20%;
-  // min-height: 150px;
   padding: 30px 35px;
   z-index: ${Common.zIndex.modalContainer};
   display: flex;
@@ -10381,7 +10379,7 @@ function App() {
 }
 async function enableMocking() {
   {
-    const { worker } = await __vitePreload(() => import("./browser-zkm6qPso.js"), true ? [] : void 0);
+    const { worker } = await __vitePreload(() => import("./browser-BKUNQBjP.js"), true ? [] : void 0);
     return worker.start({
       onUnhandledRequest: "bypass",
       serviceWorker: {
