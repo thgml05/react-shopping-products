@@ -10381,12 +10381,11 @@ function App() {
 }
 async function enableMocking() {
   {
-    const { worker } = await __vitePreload(() => import("./browser-BwpwrhKW.js"), true ? [] : void 0);
+    const { worker } = await __vitePreload(() => import("./browser-zkm6qPso.js"), true ? [] : void 0);
     return worker.start({
       onUnhandledRequest: "bypass",
       serviceWorker: {
-        url: "/shopping-mall/mockServiceWorker.js"
-        // <- 경로 설정
+        url: "/react-shopping-products/mockServiceWorker.js"
       }
     });
   }
