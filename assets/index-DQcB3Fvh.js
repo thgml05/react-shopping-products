@@ -10381,8 +10381,14 @@ function App() {
 }
 async function enableMocking() {
   {
-    const { worker } = await __vitePreload(() => import("./browser-DOD1b9tn.js"), true ? [] : void 0);
-    return worker.start({ onUnhandledRequest: "bypass" });
+    const { worker } = await __vitePreload(() => import("./browser-BwpwrhKW.js"), true ? [] : void 0);
+    return worker.start({
+      onUnhandledRequest: "bypass",
+      serviceWorker: {
+        url: "/shopping-mall/mockServiceWorker.js"
+        // <- 경로 설정
+      }
+    });
   }
 }
 enableMocking().then(() => {
