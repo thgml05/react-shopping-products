@@ -27,7 +27,7 @@ var __privateMethod = (obj, member, method) => {
   return method;
 };
 var _executor, _decorate, decorate_fn, _a2;
-import { E as ERROR_MESSAGE } from "./index-BKfrLyZ2.js";
+import { A as API_CONFIG, E as ERROR_MESSAGE } from "./index-BYk3EVHw.js";
 var POSITIONALS_EXP$1 = /(%?)(%([sdijo]))/g;
 function serializePositional$1(positional, flag) {
   switch (flag) {
@@ -4980,7 +4980,7 @@ const content$1 = [
     price: 1e5,
     imageUrl: "./coke.jpeg",
     category: "패션잡화",
-    quantity: 5
+    quantity: 8
   },
   {
     id: 3,
@@ -4988,7 +4988,7 @@ const content$1 = [
     price: 1e5,
     imageUrl: "./coke.jpeg",
     category: "패션잡화",
-    quantity: 7
+    quantity: 2
   },
   {
     id: 4,
@@ -5391,9 +5391,9 @@ const content = [
       price: 1e5,
       imageUrl: "./coke.jpeg",
       category: "패션잡화",
-      quantity: 10
+      quantity: 8
     },
-    quantity: 3
+    quantity: 5
   },
   {
     id: 3,
@@ -5403,7 +5403,31 @@ const content = [
       price: 1e5,
       imageUrl: "./coke.jpeg",
       category: "패션잡화",
-      quantity: 8
+      quantity: 2
+    },
+    quantity: 2
+  },
+  {
+    id: 4,
+    product: {
+      id: 65,
+      name: "8888",
+      price: 1e5,
+      imageUrl: "./coke.jpeg",
+      category: "8",
+      quantity: 3
+    },
+    quantity: 2
+  },
+  {
+    id: 5,
+    product: {
+      id: 66,
+      name: "9",
+      price: 1e5,
+      imageUrl: "./coke.jpeg",
+      category: "9",
+      quantity: 9
     },
     quantity: 2
   }
@@ -5412,7 +5436,7 @@ const cartData = {
   content
 };
 const handlers = [
-  http.get(`${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/products`, ({ request }) => {
+  http.get(`${API_CONFIG.BASE_URL}/products`, ({ request }) => {
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get("page") || "0");
     const size = parseInt(url.searchParams.get("size") || "10");
@@ -5438,37 +5462,34 @@ const handlers = [
       size
     });
   }),
-  http.get(`${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/cart-items`, () => {
+  http.get(`${API_CONFIG.BASE_URL}/cart-items`, () => {
     return HttpResponse.json(cartData);
   }),
-  http.post(
-    `${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/cart-items`,
-    async ({ request }) => {
-      const body = await request.json();
-      const { productId, quantity } = body;
-      const product = productData.content.find((p) => p.id === productId);
-      if (!product) {
-        return;
-      }
-      if (cartData.content.length >= 50) {
-        return HttpResponse.json(
-          {
-            message: ERROR_MESSAGE.MAX_CART_ITEM
-          },
-          { status: 400 }
-        );
-      }
-      const newCartItem = {
-        id: Math.max(...cartData.content.map((c) => c.id), 0) + 1,
-        product,
-        quantity
-      };
-      cartData.content.push(newCartItem);
-      return HttpResponse.json(newCartItem, { status: 201 });
+  http.post(`${API_CONFIG.BASE_URL}/cart-items`, async ({ request }) => {
+    const body = await request.json();
+    const { productId, quantity } = body;
+    const product = productData.content.find((p) => p.id === productId);
+    if (!product) {
+      return;
     }
-  ),
+    if (cartData.content.length >= 50) {
+      return HttpResponse.json(
+        {
+          message: ERROR_MESSAGE.MAX_CART_ITEM
+        },
+        { status: 400 }
+      );
+    }
+    const newCartItem = {
+      id: Math.max(...cartData.content.map((c) => c.id), 0) + 1,
+      product,
+      quantity
+    };
+    cartData.content = [...cartData.content, newCartItem];
+    return HttpResponse.json(newCartItem, { status: 201 });
+  }),
   http.patch(
-    `${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/cart-items/:id`,
+    `${API_CONFIG.BASE_URL}/cart-items/:id`,
     async ({ request, params }) => {
       const id = Number(params.id);
       const body = await request.json();
@@ -5491,19 +5512,17 @@ const handlers = [
           { status: 400 }
         );
       }
-      cartItem.quantity = quantity;
+      cartData.content = cartData.content.map(
+        (item) => item.id === id ? { ...item, quantity } : item
+      );
       return HttpResponse.json(cartItem, { status: 200 });
     }
   ),
-  http.delete(
-    `${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/cart-items/:id`,
-    ({ params }) => {
-      const id = Number(params.id);
-      const index = cartData.content.findIndex((item) => item.id === id);
-      cartData.content.splice(index, 1);
-      return HttpResponse.json(cartData, { status: 200 });
-    }
-  )
+  http.delete(`${API_CONFIG.BASE_URL}/cart-items/:id`, ({ params }) => {
+    const id = Number(params.id);
+    cartData.content = cartData.content.filter((item) => item.id !== id);
+    return HttpResponse.json(cartData, { status: 200 });
+  })
 ];
 const worker = setupWorker(...handlers);
 export {

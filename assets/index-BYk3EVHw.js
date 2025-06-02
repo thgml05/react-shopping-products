@@ -9448,99 +9448,11 @@ const Container$6 = newStyled.div`
 function Layout({ children }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(Container$6, { children });
 }
-const ERROR_MESSAGE = {
-  TOAST: "오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
-  PRODUCT_FETCH_FAIL: "상품 조회 중 오류가 발생했습니다.",
-  CART_FETCH_FAIL: "장바구니 조회 중 오류가 발생했습니다.",
-  CART_PRODUCT_REMOVE_FAIL: "장바구니 아이템 삭제를 실패했습니다",
-  CART_PRODUCT_ADD_FAIL: "장바구니 아이템 추가를 실패했습니다",
-  PRODUCT_MAX_QUANTITY: "상품의 최대 수량입니다.",
-  CART_PRODUCT_UPDATE_FAIL: "장바구니 아이템 수량 변경을 실패했습니다",
-  MAX_CART_ITEM: "최대 장바구니 갯수는 50개 입니다."
-};
-const fetchAPI = async ({
-  url,
-  options,
-  errorMessage
-}) => {
-  const { method, body } = options;
-  const response = await fetch(url, {
-    method,
-    headers: {
-      Authorization: `Basic ${"dGhnbWwwNTpwYXNzd29yZA=="}`,
-      "Content-Type": "application/json"
-    },
-    ...body && { body: JSON.stringify(body) }
-  });
-  if (!response.ok) {
-    let message = errorMessage;
-    const errorBody = await response.json();
-    if (errorBody == null ? void 0 : errorBody.message) {
-      message = errorBody.message;
-    }
-    throw new Error(message);
-  }
-  return response;
-};
-const getCartItem = async ({
-  page,
-  size,
-  sortBy
-}) => {
-  const url = `${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/cart-items?page=${page}&size=${size}&sort=${sortBy}`;
-  const response = await fetchAPI({
-    url,
-    options: { method: "GET" },
-    errorMessage: ERROR_MESSAGE.CART_FETCH_FAIL
-  });
-  const data = await response.json();
-  return data;
-};
-const addCart = async (id2) => {
-  const url = `${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/cart-items`;
-  const response = await fetchAPI({
-    url,
-    options: {
-      method: "POST",
-      body: { productId: id2, quantity: 1 }
-    },
-    errorMessage: ERROR_MESSAGE.CART_PRODUCT_ADD_FAIL
-  });
-  return response;
-};
-const patchCart = async (id2, quantity) => {
-  const url = `${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/cart-items/${id2}`;
-  const response = await fetchAPI({
-    url,
-    options: {
-      method: "PATCH",
-      body: { quantity }
-    },
-    errorMessage: ERROR_MESSAGE.CART_PRODUCT_UPDATE_FAIL
-  });
-  return response;
-};
-const removeCart = async (id2) => {
-  const url = `${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/cart-items/${id2}`;
-  const response = await fetchAPI({
-    url,
-    options: { method: "DELETE" },
-    errorMessage: ERROR_MESSAGE.CART_PRODUCT_REMOVE_FAIL
-  });
-  return response;
-};
 const APIContext = reactExports.createContext(null);
 function APIProvider({ children }) {
   const [state, setState] = reactExports.useState({});
   const [isLoading, setIsLoading] = reactExports.useState({});
-  const [error, setError] = reactExports.useState({});
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    APIContext.Provider,
-    {
-      value: { state, setState, isLoading, setIsLoading, error, setError },
-      children
-    }
-  );
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(APIContext.Provider, { value: { state, setState, isLoading, setIsLoading }, children });
 }
 const useAPIContext = () => {
   const context = reactExports.useContext(APIContext);
@@ -9551,38 +9463,52 @@ const useAPIContext = () => {
   }
   return context;
 };
+const ToastContext = reactExports.createContext(null);
+const ToastProvider = ({ children }) => {
+  const [toastQueue, setToastQueue] = reactExports.useState([]);
+  const addToast = (message) => {
+    const newToast = {
+      id: Date.now(),
+      message
+    };
+    setToastQueue((prev2) => [...prev2, newToast]);
+  };
+  const removeToast = (id2) => {
+    setToastQueue((prev2) => prev2.filter((toast) => toast.id !== id2));
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ToastContext.Provider, { value: { toastQueue, addToast, removeToast }, children });
+};
+const useToastContext = () => {
+  const context = reactExports.useContext(ToastContext);
+  if (context === null) {
+    throw new Error(
+      "useToastContext는 ToastProvider와 함께 사용되어야 합니다."
+    );
+  }
+  return context;
+};
 function useAPI({ fetcher, name }) {
-  const { state, setState, isLoading, setIsLoading, error, setError } = useAPIContext();
+  const { state, setState, isLoading, setIsLoading } = useAPIContext();
+  const { addToast } = useToastContext();
   const request = reactExports.useCallback(async () => {
     setIsLoading((prev2) => ({ ...prev2, [name]: true }));
-    setError((prev2) => ({
-      ...prev2,
-      [name]: { isError: false, errorMessage: "" }
-    }));
     try {
       const result = await fetcher();
       setState((prev2) => ({ ...prev2, [name]: result }));
     } catch (e2) {
-      setError((prev2) => ({
-        ...prev2,
-        [name]: {
-          isError: true,
-          errorMessage: e2.message
-        }
-      }));
+      addToast(e2.message);
     } finally {
       setIsLoading((prev2) => ({ ...prev2, [name]: false }));
     }
-  }, [fetcher, name, setState, setIsLoading, setError]);
+  }, [fetcher, name, setState, setIsLoading]);
   reactExports.useEffect(() => {
-    if (state[name] !== void 0 || error[name] !== void 0)
+    if (state[name] !== void 0)
       return;
     request();
-  }, [name, state, request]);
+  }, [name, state[name], request]);
   return {
     data: state[name],
     isLoading: isLoading[name] || false,
-    error: error[name] || { isError: false, errorMessage: "" },
     refetch: request
   };
 }
@@ -9622,15 +9548,110 @@ const Button$1 = newStyled.button`
   border: none;
   position: relative;
 `;
+const API_CONFIG = {
+  BASE_URL: "http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com",
+  DEFAULT_PAGE: 0,
+  DEFAULT_SIZE: 50,
+  DEFAULT_SORT: "desc",
+  CART_NAME: "cartItems",
+  PRODUCT_NAME: "productList"
+};
+const CART_CONFIG = {
+  DEFAULT_QUANTITY: 1,
+  MAX_CART_ITEM_COUNT: 50
+};
+const ERROR_MESSAGE = {
+  TOAST: "오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+  PRODUCT_FETCH_FAIL: "상품 조회 중 오류가 발생했습니다.",
+  CART_FETCH_FAIL: "장바구니 조회 중 오류가 발생했습니다.",
+  CART_PRODUCT_REMOVE_FAIL: "장바구니 아이템 삭제를 실패했습니다",
+  CART_PRODUCT_ADD_FAIL: "장바구니 아이템 추가를 실패했습니다",
+  PRODUCT_MAX_QUANTITY: "상품의 최대 수량입니다.",
+  CART_PRODUCT_UPDATE_FAIL: "장바구니 아이템 수량 변경을 실패했습니다",
+  MAX_CART_ITEM: "최대 장바구니 갯수는 50개 입니다."
+};
+const fetchAPI = async ({
+  url,
+  options,
+  errorMessage
+}) => {
+  const { method, body } = options;
+  const response = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Basic ${"dGhnbWwwNTpwYXNzd29yZA=="}`,
+      "Content-Type": "application/json"
+    },
+    ...body && { body: JSON.stringify(body) }
+  });
+  if (!response.ok) {
+    let message = errorMessage;
+    const errorBody = await response.json();
+    if (errorBody == null ? void 0 : errorBody.message) {
+      message = errorBody.message;
+    }
+    throw new Error(message);
+  }
+  return response;
+};
+const getCartItem = async ({
+  page,
+  size,
+  sortBy
+}) => {
+  const url = `${API_CONFIG.BASE_URL}/cart-items?page=${page}&size=${size}&sort=${sortBy}`;
+  const response = await fetchAPI({
+    url,
+    options: { method: "GET" },
+    errorMessage: ERROR_MESSAGE.CART_FETCH_FAIL
+  });
+  const data = await response.json();
+  return data;
+};
+const addCart = async (id2) => {
+  const url = `${API_CONFIG.BASE_URL}/cart-items`;
+  const response = await fetchAPI({
+    url,
+    options: {
+      method: "POST",
+      body: { productId: id2, quantity: CART_CONFIG.DEFAULT_QUANTITY }
+    },
+    errorMessage: ERROR_MESSAGE.CART_PRODUCT_ADD_FAIL
+  });
+  return response;
+};
+const patchCart = async (id2, quantity) => {
+  const url = `${API_CONFIG.BASE_URL}/cart-items/${id2}`;
+  const response = await fetchAPI({
+    url,
+    options: {
+      method: "PATCH",
+      body: { quantity }
+    },
+    errorMessage: ERROR_MESSAGE.CART_PRODUCT_UPDATE_FAIL
+  });
+  return response;
+};
+const removeCart = async (id2) => {
+  const url = `${API_CONFIG.BASE_URL}/cart-items/${id2}`;
+  const response = await fetchAPI({
+    url,
+    options: { method: "DELETE" },
+    errorMessage: ERROR_MESSAGE.CART_PRODUCT_REMOVE_FAIL
+  });
+  return response;
+};
+const fetchCartItem = async () => {
+  return await getCartItem({
+    page: API_CONFIG.DEFAULT_PAGE,
+    size: API_CONFIG.DEFAULT_SIZE,
+    sortBy: API_CONFIG.DEFAULT_SORT
+  }).then((res) => res.content);
+};
 function Header({ title, onModalOpen }) {
-  const fetchCartItems = reactExports.useCallback(async () => {
-    return await getCartItem({ page: 0, size: 50, sortBy: "desc" }).then(
-      (res) => res.content
-    );
-  }, []);
   const { data: cartList } = useAPI({
-    fetcher: fetchCartItems,
-    name: "cartItems"
+    fetcher: fetchCartItem,
+    name: API_CONFIG.CART_NAME
   });
   const totalCartProducts = cartList == null ? void 0 : cartList.length;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Container$5, { children: [
@@ -9818,7 +9839,7 @@ newStyled.span`
   line-height: 15px;
   color: #000000;
 `;
-const SoldoutBakcgound = newStyled.div`
+const SoldoutBackground = newStyled.div`
   position: absolute;
   top: 0;
   left: 0;
@@ -9836,10 +9857,21 @@ const SoldOutText = newStyled.span`
   font-size: 24px;
   font-weight: bold;
 `;
+const SHOP_INFO = {
+  SHOPPING_MALL_TITLE: "SHOP",
+  PRODUCT_SECTION_TITLE: "우테코 상품 목록",
+  CART_MODAL_TITLE: "장바구니",
+  TOTAL_PRICE_TEXT: "총 결제 금액",
+  CART_MODAL_CLOSE_BUTTON_TEXT: "닫기",
+  DELETE_BUTTON_TEXT: "삭제",
+  ADD_BUTTON_TEXT: "담기",
+  REMOVE_BUTTON_TEXT: "빼기",
+  SOLD_OUT_TEXT: "품절"
+};
 function AddButton({ isDisable, onClick }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(CartAddButton, { disabled: isDisable, onClick, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(CartButtonImg, { src: "./add_shopping_cart.png", alt: "담기" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(CartAddButtonText, { children: "담기" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(CartAddButtonText, { children: SHOP_INFO.ADD_BUTTON_TEXT })
   ] });
 }
 const Container$1 = newStyled.div`
@@ -9878,7 +9910,7 @@ function QuantityController({
       {
         src: "./minusButton.png",
         alt: "마이너스 버튼",
-        onClick: quantity === 0 ? onRemoveClick : onDecreaseClick
+        onClick: quantity === 1 ? onRemoveClick : onDecreaseClick
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(QuantityText, { children: quantity }),
@@ -9892,39 +9924,11 @@ function QuantityController({
     )
   ] });
 }
-const ToastContext = reactExports.createContext(null);
-const ToastProvider = ({ children }) => {
-  const [toast, setToast] = reactExports.useState({
-    isToast: false,
-    message: ""
-  });
-  const showToast = (message) => {
-    setToast({ isToast: true, message });
-    setTimeout(() => {
-      setToast({ isToast: false, message: "" });
-    }, 3e3);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(ToastContext.Provider, { value: { toast, showToast }, children });
-};
-const useToastContext = () => {
-  const context = reactExports.useContext(ToastContext);
-  if (context === null) {
-    throw new Error(
-      "useToastContext는 ToastProvider와 함께 사용되어야 합니다."
-    );
-  }
-  return context;
-};
 const useCartActions = () => {
-  const { showToast } = useToastContext();
-  const fetchCartItems = reactExports.useCallback(async () => {
-    return await getCartItem({ page: 0, size: 50, sortBy: "desc" }).then(
-      (res) => res.content
-    );
-  }, []);
+  const { addToast } = useToastContext();
   const { data: cartList, refetch } = useAPI({
-    fetcher: fetchCartItems,
-    name: "cartItems"
+    fetcher: fetchCartItem,
+    name: API_CONFIG.CART_NAME
   });
   const handleAddCart = async (product) => {
     try {
@@ -9933,7 +9937,7 @@ const useCartActions = () => {
       await addCart(product.id);
       refetch();
     } catch (error) {
-      showToast(error.message);
+      addToast(error.message);
     }
   };
   const handleIncreaseQuantity = async (product) => {
@@ -9943,10 +9947,12 @@ const useCartActions = () => {
       const cartItem = cartList.find((item) => item.product.id === product.id);
       if (!cartItem)
         return;
+      if (cartItem.quantity === cartItem.product.quantity)
+        throw new Error(ERROR_MESSAGE.PRODUCT_MAX_QUANTITY);
       await patchCart(cartItem.id, cartItem.quantity + 1);
       await refetch();
     } catch (error) {
-      showToast(error.message);
+      addToast(error.message);
     }
   };
   const handleDecreaseQuantity = async (product) => {
@@ -9959,7 +9965,7 @@ const useCartActions = () => {
       await patchCart(cartItem.id, cartItem.quantity - 1);
       await refetch();
     } catch (error) {
-      showToast(error.message);
+      addToast(error.message);
     }
   };
   const handleRemoveCart = async (product) => {
@@ -9972,10 +9978,11 @@ const useCartActions = () => {
       await removeCart(cartItem.id);
       await refetch();
     } catch (error) {
-      showToast(error.message);
+      addToast(error.message);
     }
   };
   return {
+    cartList,
     handleAddCart,
     handleIncreaseQuantity,
     handleDecreaseQuantity,
@@ -9984,14 +9991,9 @@ const useCartActions = () => {
 };
 function Product$1({ item }) {
   const { name, price, imageUrl, quantity } = item;
-  const fetchCartItems = reactExports.useCallback(async () => {
-    return await getCartItem({ page: 0, size: 50, sortBy: "desc" }).then(
-      (res) => res.content
-    );
-  }, []);
   const { data: cartList } = useAPI({
-    fetcher: fetchCartItems,
-    name: "cartItems"
+    fetcher: fetchCartItem,
+    name: API_CONFIG.CART_NAME
   });
   const {
     handleAddCart,
@@ -10005,7 +10007,7 @@ function Product$1({ item }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Container$2, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(ProductImageContainer, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(ProductImage, { src: imageUrl, alt: name }),
-      quantity === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(SoldoutBakcgound, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SoldOutText, { children: "품절" }) })
+      quantity === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(SoldoutBackground, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SoldOutText, { children: SHOP_INFO.SOLD_OUT_TEXT }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Detail, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(ProductName, { children: name }),
@@ -10033,8 +10035,14 @@ const List = newStyled.ul`
   justify-items: center;
   list-style: none;
 `;
+const CATEGORY = ["전체", "식료품", "패션잡화"];
+const SORT_PRICE = ["낮은 가격 순", "높은 가격 순"];
+const SORT_PRICE_MAP = {
+  "낮은 가격 순": "asc",
+  "높은 가격 순": "desc"
+};
 const getProduct = async ({ page, size, sortBy }) => {
-  const url = `${"http://techcourse-lv2-alb-974870821.ap-northeast-2.elb.amazonaws.com"}/products?page=${page}&size=${size}&sort=price,${sortBy}&sort=id,desc`;
+  const url = `${API_CONFIG.BASE_URL}/products?page=${page}&size=${size}&sort=price,${sortBy}&sort=id,desc`;
   const response = await fetchAPI({
     url,
     options: { method: "GET" },
@@ -10043,33 +10051,27 @@ const getProduct = async ({ page, size, sortBy }) => {
   const data = response.json();
   return data;
 };
-const CATEGORY = ["전체", "식료품", "패션잡화"];
-const SORT_PRICE = ["낮은 가격 순", "높은 가격 순"];
-const SORT_PRICE_MAP = {
-  "낮은 가격 순": "asc",
-  "높은 가격 순": "desc"
+const fetchProductList = async (sortBy = "asc") => {
+  return await getProduct({
+    page: API_CONFIG.DEFAULT_PAGE,
+    size: API_CONFIG.DEFAULT_SIZE,
+    sortBy
+  }).then((res) => res.content);
 };
 function ProductList({ category, sortBy }) {
-  const mappedSortType = reactExports.useMemo(() => {
-    return SORT_PRICE_MAP[sortBy];
-  }, [sortBy]);
-  const fetchProductList = reactExports.useCallback(async () => {
-    return await getProduct({ page: 0, size: 50, sortBy: mappedSortType }).then(
-      (res) => res.content
-    );
-  }, [mappedSortType]);
+  const mappedSortType = SORT_PRICE_MAP[sortBy];
   const { data: productList } = useAPI({
-    fetcher: fetchProductList,
-    name: `productList-${mappedSortType}`
+    fetcher: () => fetchProductList(mappedSortType),
+    name: `${API_CONFIG.PRODUCT_NAME}-${mappedSortType}`
   });
-  const filteredProductList = reactExports.useMemo(() => {
-    if (category === "전체") {
+  const filteredProductList = (() => {
+    if (category === CATEGORY[0]) {
       return productList;
     }
     return productList == null ? void 0 : productList.filter(
       (item) => item.category === category
     );
-  }, [category, productList]);
+  })();
   return /* @__PURE__ */ jsxRuntimeExports.jsx(List, { children: filteredProductList == null ? void 0 : filteredProductList.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx(Product$1, { item }, item.id)) });
 }
 const Container = newStyled.header`
@@ -10085,12 +10087,6 @@ const TitleText = newStyled.header`
 function Title$1({ title }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(Container, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(TitleText, { children: title }) });
 }
-const SHOPPING_MALL_TITLE = "SHOP";
-const PRODUCT_SECTION_TITLE = "우테코 상품 목록";
-const CART_MODAL_TITLE = "장바구니";
-const TOTAL_PRICE_TEXT = "총 결제 금액";
-const CART_MODAL_CLOSE_BUTTON_TEXT = "닫기";
-const DELETE_BUTTON_TEXT = "삭제";
 const Common = {
   colors: {
     white: " #ffffff",
@@ -10265,63 +10261,44 @@ function CartItemRow({ item }) {
         }
       )
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonText, { onClick: () => handleRemoveCart(product), children: DELETE_BUTTON_TEXT }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonContainer, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonText, { onClick: () => handleRemoveCart(product), children: SHOP_INFO.DELETE_BUTTON_TEXT }) })
   ] });
 }
 function CartModal({ onClose }) {
-  const fetchCartItems = reactExports.useCallback(async () => {
-    return await getCartItem({ page: 0, size: 50, sortBy: "desc" }).then(
-      (res) => res.content
-    );
-  }, []);
   const { data: cartList } = useAPI({
-    fetcher: fetchCartItems,
-    name: "cartItems"
+    fetcher: fetchCartItem,
+    name: API_CONFIG.CART_NAME
   });
-  const totalPrice = reactExports.useMemo(() => {
-    return cartList == null ? void 0 : cartList.reduce(
-      (acc, item) => acc + item.product.price * item.quantity,
-      0
-    );
-  }, [cartList]);
+  const totalPrice = cartList == null ? void 0 : cartList.reduce(
+    (acc, item) => acc + item.product.price * item.quantity,
+    0
+  );
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ModalHeader, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(ModalTitle, { children: CART_MODAL_TITLE }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ModalHeader, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(ModalTitle, { children: SHOP_INFO.CART_MODAL_TITLE }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(ProductContainer, { children: cartList == null ? void 0 : cartList.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx(CartItemRow, { item }, item.id)) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(PriceContainer, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(TotalPriceText, { children: TOTAL_PRICE_TEXT }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(TotalPriceText, { children: SHOP_INFO.TOTAL_PRICE_TEXT }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(TotalPrice, { children: [
         totalPrice == null ? void 0 : totalPrice.toLocaleString(),
         "원"
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(ModalAction, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: onClose, children: CART_MODAL_CLOSE_BUTTON_TEXT }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ModalAction, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: onClose, children: SHOP_INFO.CART_MODAL_CLOSE_BUTTON_TEXT }) })
   ] });
 }
 function App() {
-  const { toast, showToast } = useToastContext();
+  const { toastQueue, removeToast } = useToastContext();
   const [isModalOpen, setIsModalOpen] = reactExports.useState(false);
   const [category, setCategory] = reactExports.useState(CATEGORY[0]);
   const [sortBy, setSortBy] = reactExports.useState(SORT_PRICE[0]);
-  const mappedSortType = reactExports.useMemo(() => {
-    return SORT_PRICE_MAP[sortBy];
-  }, [sortBy]);
-  const fetchProductList = reactExports.useCallback(async () => {
-    return await getProduct({ page: 0, size: 50, sortBy: mappedSortType }).then(
-      (res) => res.content
-    );
-  }, [mappedSortType]);
-  const { isLoading: isProductLoading, error: productError } = useAPI({
-    fetcher: fetchProductList,
-    name: `productList-${mappedSortType}`
+  const mappedSortType = SORT_PRICE_MAP[sortBy];
+  const { isLoading: isProductLoading } = useAPI({
+    fetcher: () => fetchProductList(mappedSortType),
+    name: `${API_CONFIG.PRODUCT_NAME}-${mappedSortType}`
   });
-  const fetchCartItems = reactExports.useCallback(async () => {
-    return await getCartItem({ page: 0, size: 50, sortBy: "desc" }).then(
-      (res) => res.content
-    );
-  }, []);
-  const { isLoading: isCartLoading, error: cartError } = useAPI({
-    fetcher: fetchCartItems,
-    name: "cartItems"
+  const { isLoading: isCartLoading } = useAPI({
+    fetcher: fetchCartItem,
+    name: API_CONFIG.CART_NAME
   });
   const handleModalOpen = () => {
     setIsModalOpen(true);
@@ -10338,21 +10315,27 @@ function App() {
     setSortBy(value);
   };
   reactExports.useEffect(() => {
-    if (productError.isError) {
-      showToast(productError.errorMessage);
+    if (toastQueue.length > 0) {
+      const timer = setTimeout(() => {
+        removeToast(toastQueue[0].id);
+      }, 3e3);
+      return () => clearTimeout(timer);
     }
-    if (cartError.isError) {
-      showToast(cartError.errorMessage);
-    }
-  }, [productError.isError, cartError.isError]);
+  }, [toastQueue]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Global, { styles: GlobalStyle }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Layout, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Header, { title: SHOPPING_MALL_TITLE, onModalOpen: handleModalOpen }),
-      toast.isToast && /* @__PURE__ */ jsxRuntimeExports.jsx(Toast, { message: toast.message }),
-      isProductLoading || isCartLoading && /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingSpinner, { duration: 2 }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Header,
+        {
+          title: SHOP_INFO.SHOPPING_MALL_TITLE,
+          onModalOpen: handleModalOpen
+        }
+      ),
+      toastQueue.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(Toast, { message: toastQueue[0].message }),
+      (isProductLoading || isCartLoading) && /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingSpinner, { duration: 2 }),
       !isProductLoading && !isCartLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs(Section, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Title$1, { title: PRODUCT_SECTION_TITLE }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Title$1, { title: SHOP_INFO.PRODUCT_SECTION_TITLE }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(DropdownContainer, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Dropdown,
@@ -10379,7 +10362,7 @@ function App() {
 }
 async function enableMocking() {
   {
-    const { worker } = await __vitePreload(() => import("./browser-BKUNQBjP.js"), true ? [] : void 0);
+    const { worker } = await __vitePreload(() => import("./browser-rwsTKvOE.js"), true ? [] : void 0);
     return worker.start({
       onUnhandledRequest: "bypass",
       serviceWorker: {
@@ -10394,5 +10377,6 @@ enableMocking().then(() => {
   );
 });
 export {
+  API_CONFIG as A,
   ERROR_MESSAGE as E
 };
